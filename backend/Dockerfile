@@ -1,18 +1,7 @@
-FROM node:18-alpine
-
-WORKDIR /app
-
-# Copy package files
+FROM node:20-alpine
+WORKDIR /usr/src/app
 COPY package*.json ./
-
-# Install dependencies
-RUN npm ci --only=production
-
-# Copy source code
+RUN npm install
 COPY . .
-
-# Expose port
 EXPOSE 8000
-
-# Start the application
-CMD ["npm", "start"]
+CMD ["node", "src/app.js"]
