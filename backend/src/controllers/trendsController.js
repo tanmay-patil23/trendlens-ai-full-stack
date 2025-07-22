@@ -1,48 +1,39 @@
-const TrendAnalyzer = require('../services/socialMediaService');
 const redis = require('redis');
 
-const trendAnalyzer = new TrendAnalyzer();
-const redisClient = redis.createClient(process.env.REDIS_URL);
+// Create Redis client
+const redisClient = redis.createClient({ 
+  url: process.env.REDIS_URL || 'redis://redis:6379'
+});
+
+redisClient.on('error', err => console.error('Redis Client Error:', err));
+redisClient.connect().catch(err => console.error('Redis connection failed:', err));
 
 class TrendsController {
-  // Get real-time trending topics
   async getRealTimeTrends(req, res) {
     try {
       const { platform = 'all', location = 'worldwide', limit = 20 } = req.query;
+      
+      // Mock trending data
+      const mockTrends = [
+        { name: 'AI Revolution', platform: 'twitter', volume: 15420 },
+        { name: 'Climate Tech', platform: 'instagram', volume: 8930 },
+        { name: 'Web3 Development', platform: 'linkedin', volume: 5670 },
+        { name: 'Sustainable Energy', platform: 'twitter', volume: 12340 },
+        { name: 'Machine Learning', platform: 'all', volume: 18750 }
+      ];
 
-      // Check cache first
-      const cacheKey = `trends:${platform}:${location}:${limit}`;
-      const cachedTrends = await redisClient.get(cacheKey);
-
-      if (cachedTrends) {
-        return res.json({
-          success: true,
-          data: JSON.parse(cachedTrends),
-          cached: true,
-          timestamp: new Date().toISOString()
-        });
-      }
-
-      // Get fresh trends data
-      const trendsData = await trendAnalyzer.getTrendingTopics(location);
-
-      // Filter by platform if specified
-      let filteredTrends = trendsData;
+      let filtered = mockTrends;
       if (platform !== 'all') {
-        filteredTrends = trendsData.filter(trend => 
-          trend.platform === platform || trend.platforms?.includes(platform)
+        filtered = mockTrends.filter(trend => 
+          trend.platform === platform || trend.platform === 'all'
         );
       }
 
-      // Limit results
-      const limitedTrends = filteredTrends.slice(0, parseInt(limit));
-
-      // Cache for 5 minutes
-      await redisClient.setex(cacheKey, 300, JSON.stringify(limitedTrends));
+      const limited = filtered.slice(0, parseInt(limit));
 
       res.json({
         success: true,
-        data: limitedTrends,
+        data: limited,
         cached: false,
         timestamp: new Date().toISOString()
       });
@@ -57,33 +48,25 @@ class TrendsController {
     }
   }
 
-  // Analyze specific keywords
   async analyzeKeywords(req, res) {
     try {
-      const { keywords, timeframe = '24h', platforms = ['all'] } = req.body;
-
-      if (!keywords || !Array.isArray(keywords)) {
+      const { keywords, timeframe = '24h' } = req.body;
+      
+      if (!Array.isArray(keywords) || keywords.length === 0) {
         return res.status(400).json({
           success: false,
           error: 'Keywords array is required'
         });
       }
 
-      const analysis = await Promise.all(
-        keywords.map(async (keyword) => {
-          const trendData = await trendAnalyzer.analyzeKeywordTrend(keyword, timeframe);
-          const sentiment = await trendAnalyzer.analyzeSentiment(keyword);
-
-          return {
-            keyword,
-            volume: trendData.volume,
-            growth: trendData.growth,
-            sentiment: sentiment.score,
-            platforms: trendData.platforms,
-            viralPotential: trendData.viralScore
-          };
-        })
-      );
+      const analysis = keywords.map(keyword => ({
+        keyword,
+        volume: Math.floor(Math.random() * 1000) + 100,
+        growth: (Math.random() * 200 - 100).toFixed(2) + '%',
+        sentiment: (Math.random() * 2 - 1).toFixed(2),
+        platforms: ['twitter', 'instagram', 'linkedin'],
+        viralPotential: Math.floor(Math.random() * 100)
+      }));
 
       res.json({
         success: true,
@@ -101,24 +84,35 @@ class TrendsController {
     }
   }
 
-  // Get trend predictions
   async getTrendPredictions(req, res) {
     try {
       const { category = 'all', timeRange = '7d' } = req.query;
 
-      // This would typically call your AI service
-      const predictions = await fetch(`${process.env.AI_SERVICE_URL}/api/trends/predict`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ category, timeRange })
-      });
-
-      const data = await predictions.json();
+      const mockPredictions = [
+        {
+          trend: 'AI-Powered Content Creation',
+          probability: 0.87,
+          timeframe: '2-3 weeks',
+          category: 'technology'
+        },
+        {
+          trend: 'Sustainable Fashion Movement',
+          probability: 0.72,
+          timeframe: '1-2 months',
+          category: 'lifestyle'
+        },
+        {
+          trend: 'Remote Work Technology',
+          probability: 0.65,
+          timeframe: '3-4 weeks',
+          category: 'business'
+        }
+      ];
 
       res.json({
         success: true,
-        data: data.predictions || [],
-        confidence: data.confidence || 0,
+        data: mockPredictions,
+        confidence: 0.78,
         timestamp: new Date().toISOString()
       });
 

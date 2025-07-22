@@ -1,21 +1,13 @@
-FROM node:18-alpine
+# frontend/Dockerfile
+
+FROM node:18-bullseye
+
+RUN apt-get update && apt-get install -y python3 g++ make \
+ && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
-
-# Copy package files
 COPY package*.json ./
-
-# Install dependencies
-RUN npm ci --only=production
-
-# Copy source code
+RUN npm ci --production
 COPY . .
-
-# Build the application
-RUN npm run build
-
-# Expose port
 EXPOSE 3000
-
-# Start the application
-CMD ["npm", "start"]
+CMD ["npm","run","dev"]
